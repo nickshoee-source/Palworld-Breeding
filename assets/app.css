@@ -1,62 +1,71 @@
+/* Palette. Indigo accent over neutrals carrying a faint violet bias, so the
+   greys read as chosen rather than inherited. The accent deliberately sits
+   clear of the green / amber / red that a tool like this needs to spend on
+   meaning -- a good outcome, a thin chance, an impossible request.
+
+   Themes are defined token-level three times over, because the viewer has three
+   states: no stamp at all (system default, where only the media query applies),
+   an explicit dark stamp, and an explicit light stamp that must beat a dark OS.
+   Components below only ever reference the tokens. */
 :root {
-  --bg: #f6f7f9;
+  --bg: #f5f5f8;
   --panel: #ffffff;
-  --panel-2: #f0f2f5;
-  --ink: #16191d;
-  --ink-2: #5a6270;
-  --ink-3: #868e9c;
-  --line: #dfe3e9;
-  --accent: #2f6fed;
+  --panel-2: #eeeef4;
+  --ink: #17171f;
+  --ink-2: #565b6b;
+  --ink-3: #83879a;
+  --line: #dedee8;
+  --accent: #4c46b8;
   --accent-ink: #ffffff;
   --good: #1a7f52;
-  --warn: #9a6206;
+  --warn: #8f5f06;
   --bad: #b4322b;
   --good-bg: #e6f4ec;
-  --warn-bg: #fdf3e2;
+  --warn-bg: #fbf1e0;
   --bad-bg: #fbeceb;
   --radius: 10px;
-  --shadow: 0 1px 2px rgba(16, 20, 28, .06), 0 4px 12px rgba(16, 20, 28, .05);
+  --shadow: 0 1px 2px rgba(20, 18, 40, .06), 0 4px 12px rgba(20, 18, 40, .05);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #14171c;
-    --panel: #1c2027;
-    --panel-2: #232833;
-    --ink: #e8ebf0;
-    --ink-2: #a5adbb;
-    --ink-3: #79818f;
-    --line: #2f3540;
-    --accent: #6a9bff;
-    --accent-ink: #0d1017;
+    --bg: #15151c;
+    --panel: #1d1d26;
+    --panel-2: #262633;
+    --ink: #e9e9f2;
+    --ink-2: #a8abbd;
+    --ink-3: #797d92;
+    --line: #313142;
+    --accent: #9c95ff;
+    --accent-ink: #101018;
     --good: #5ad19a;
     --warn: #e8b45e;
     --bad: #f08279;
-    --good-bg: #142b21;
-    --warn-bg: #302614;
-    --bad-bg: #33191a;
+    --good-bg: #14261f;
+    --warn-bg: #2e2515;
+    --bad-bg: #331a1a;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #14171c;
-  --panel: #1c2027;
-  --panel-2: #232833;
-  --ink: #e8ebf0;
-  --ink-2: #a5adbb;
-  --ink-3: #79818f;
-  --line: #2f3540;
-  --accent: #6a9bff;
-  --accent-ink: #0d1017;
+  --bg: #15151c;
+  --panel: #1d1d26;
+  --panel-2: #262633;
+  --ink: #e9e9f2;
+  --ink-2: #a8abbd;
+  --ink-3: #797d92;
+  --line: #313142;
+  --accent: #9c95ff;
+  --accent-ink: #101018;
   --good: #5ad19a;
   --warn: #e8b45e;
   --bad: #f08279;
-  --good-bg: #142b21;
-  --warn-bg: #302614;
-  --bad-bg: #33191a;
+  --good-bg: #14261f;
+  --warn-bg: #2e2515;
+  --bad-bg: #331a1a;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
   color-scheme: dark;
 }
@@ -75,8 +84,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { line-height: 1.25; margin: 0; font-weight: 650; }
-h1 { font-size: 20px; }
+h1, h2, h3 { line-height: 1.25; margin: 0; font-weight: 650; text-wrap: balance; }
+h1 { font-size: 20px; letter-spacing: -.015em; }
 h2 { font-size: 17px; }
 h3 { font-size: 14px; }
 p { margin: 0 0 10px; }

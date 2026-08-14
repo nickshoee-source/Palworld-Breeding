@@ -13,6 +13,10 @@ const el = (tag, props = {}, children = []) => {
   return node;
 };
 const pct = (x) => `${(x * 100).toFixed(x < 0.01 ? 2 : 1)}%`;
+const revealResults = (node) => node.scrollIntoView({
+  behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+  block: 'nearest',
+});
 const round = (x) => (x >= 100 ? Math.round(x) : x.toFixed(1));
 
 const STORAGE_KEY = 'palworld-breeding-optimiser.inventory.v1';
@@ -350,7 +354,7 @@ function renderResults({ plans }, target, options) {
         `Nothing in your list can reach ${targetName} with those passives within ${options.maxSteps} steps. ` +
         'Raise the step limit, allow catching wild Pals, or add a Pal that already carries one of the passives.'),
     );
-    host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    revealResults(host);
     return;
   }
 
@@ -359,19 +363,21 @@ function renderResults({ plans }, target, options) {
 
   const nodes = [el('h2', {}, `${plans.length} route${plans.length === 1 ? '' : 's'} to ${targetName}`)];
 
-  // If the top plan is not also the shortest or the cheapest, say so plainly
-  // instead of letting the reader assume it is both.
+  // The top plan is not always the one with the smallest numbers on screen:
+  // ranking also charges for catching, and a rare Pal costs more than a common
+  // one. Say so rather than letting the order look arbitrary.
   const best = plans[0];
-  if (best.steps > fewestSteps || best.eggs > fewestEggs * 1.5) {
+  if (best.steps > fewestSteps || best.eggs > fewestEggs * 1.05) {
     nodes.push(el('div', { className: 'note' },
-      `The best plan here is ranked by "${$('opt-objective').selectedOptions[0].textContent.toLowerCase()}". ` +
-      `The shortest route in this list takes ${fewestSteps} step${fewestSteps === 1 ? '' : 's'}, ` +
-      `and the cheapest averages about ${round(fewestEggs)} eggs.`));
+      `Ranked by "${$('opt-objective').selectedOptions[0].textContent.toLowerCase()}", which also counts how hard the Pals ` +
+      'you need to catch are to find — so a route with slightly more eggs can still come first if it starts from commoner Pals. ' +
+      `The shortest route below takes ${fewestSteps} step${fewestSteps === 1 ? '' : 's'}; ` +
+      `the fewest-eggs route averages about ${round(fewestEggs)}.`));
   }
 
   plans.forEach((plan, i) => nodes.push(renderPlan(plan, i === 0)));
   host.replaceChildren(...nodes);
-  host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  revealResults(host);
 }
 
 function palLabel(candidate) {

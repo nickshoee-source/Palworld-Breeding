@@ -49,3 +49,13 @@ if (out.includes('assets/app.css') || out.includes('src/app.js')) {
 await mkdir(join(ROOT, 'dist'), { recursive: true });
 await writeFile(join(ROOT, 'dist', 'palbreeder.html'), out);
 console.log(`dist/palbreeder.html  ${(out.length / 1e6).toFixed(2)} MB`);
+
+// A second copy for hosts that supply their own document skeleton and expect
+// page content only -- same bundle, without the wrapper tags.
+const body = out.match(/<body>([\s\S]*)<\/body>/)?.[1];
+if (!body) throw new Error('could not find the page body to extract');
+const title = out.match(/<title>([^<]*)<\/title>/)?.[1] ?? 'Palworld Breeding Optimiser';
+const styles = out.match(/<style>[\s\S]*?<\/style>/)?.[0] ?? '';
+
+await writeFile(join(ROOT, 'dist', 'embed.html'), `<title>${title}</title>\n${styles}\n${body.trim()}\n`);
+console.log('dist/embed.html       (page content only)');
