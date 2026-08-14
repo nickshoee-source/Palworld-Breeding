@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palworld Breeding Optimiser</title>
+<meta name="description" content="Plan the shortest breeding line to any Palworld 1.0 Pal with the passives you want, and work out which passives that Pal should have.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>%F0%9F%A5%9A</text></svg>">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Palworld Breeding Optimiser</h1>
+      <span class="sub">Palworld 1.0 &middot; all 299 Pals &middot; all 44,850 breeding pairs</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-plan" aria-controls="view-plan" aria-selected="true">Breeding planner</button>
+      <button role="tab" id="tab-passives" aria-controls="view-passives" aria-selected="false">Best passives</button>
+      <button role="tab" id="tab-combos" aria-controls="view-combos" aria-selected="false">Combo lookup</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap pad-top">
+
+  <!-- ---------------------------------------------------------- planner -->
+  <section id="view-plan" role="tabpanel" aria-labelledby="tab-plan">
+    <div class="cols">
+
+      <div class="stack">
+        <div class="panel">
+          <h2>Pals I already have</h2>
+          <p class="hint">Add the Pals you own that carry passives worth breeding from. Sex is optional, but filling it in makes the plan exact.</p>
+
+          <div class="row" style="margin-bottom: 12px;">
+            <label class="field" style="flex: 2 1 200px;">
+              <span>Pal</span>
+              <input type="text" id="own-pal" list="pal-list" placeholder="Start typing a Pal name" autocomplete="off">
+            </label>
+            <label class="field narrow">
+              <span>Sex</span>
+              <select id="own-gender">
+                <option value="?">Either</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </label>
+            <label class="field narrow">
+              <span>How many</span>
+              <input type="number" id="own-count" value="1" min="1" max="99">
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Its passives (up to 4)</span>
+            <input type="text" id="own-passive" list="passive-list" placeholder="Add a passive, then press Enter" autocomplete="off">
+          </label>
+          <div class="tags" id="own-passive-tags" style="margin: -4px 0 12px;"></div>
+
+          <button class="btn primary" id="own-add">Add to my Pals</button>
+
+          <div id="inventory" style="margin-top: 16px;"></div>
+
+          <div class="row" style="margin-top: 12px;">
+            <button class="btn small ghost" id="inv-export">Export</button>
+            <button class="btn small ghost" id="inv-import">Import</button>
+            <button class="btn small ghost" id="inv-clear">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <h2>The Pal I want</h2>
+          <p class="hint">Pick the end product and the passives it should end up with.</p>
+
+          <label class="field">
+            <span>Target Pal</span>
+            <input type="text" id="target-pal" list="pal-list" placeholder="e.g. Anubis" autocomplete="off">
+          </label>
+
+          <label class="field">
+            <span>Passives it should have (up to 4)</span>
+            <input type="text" id="target-passive" list="passive-list" placeholder="Add a passive, then press Enter" autocomplete="off">
+          </label>
+          <div class="tags" id="target-passive-tags" style="margin: -4px 0 14px;"></div>
+
+          <div class="row" style="margin-bottom: 14px;">
+            <label class="field">
+              <span>Rank plans by</span>
+              <select id="opt-objective">
+                <option value="balanced">Quickest overall</option>
+                <option value="steps">Fewest breeding steps</option>
+                <option value="eggs">Fewest eggs hatched</option>
+              </select>
+            </label>
+            <label class="field narrow">
+              <span>Step limit</span>
+              <select id="opt-maxsteps">
+                <option>3</option><option>4</option><option>5</option>
+                <option selected>6</option><option>7</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="checks" style="margin-bottom: 14px;">
+            <label><input type="checkbox" id="opt-wild" checked> I'm willing to catch wild Pals</label>
+            <label><input type="checkbox" id="opt-clean"> Intermediates must stay junk-free</label>
+          </div>
+
+          <button class="btn primary" id="solve">Find the fastest route</button>
+          <span class="progress" id="solve-progress" style="margin-left: 10px;"></span>
+        </div>
+
+        <div class="panel" id="target-advice" hidden></div>
+      </div>
+    </div>
+
+    <div class="panel" id="results" style="margin-top: 16px;" hidden></div>
+  </section>
+
+  <!-- --------------------------------------------------------- passives -->
+  <section id="view-passives" role="tabpanel" aria-labelledby="tab-passives" hidden>
+    <div class="panel">
+      <h2>What should this Pal have?</h2>
+      <p class="hint">Pick what the Pal is for. Every passive is scored from its actual in-game numbers against what that job needs, and the top four are the four slots you have.</p>
+
+      <div class="row" style="margin-bottom: 14px;">
+        <label class="field">
+          <span>This Pal is for</span>
+          <select id="role"></select>
+        </label>
+        <label class="field" id="wrap-task" hidden>
+          <span>Base job</span>
+          <select id="work-task"></select>
+        </label>
+        <label class="field" id="wrap-element" hidden>
+          <span>Its element</span>
+          <select id="element"></select>
+        </label>
+      </div>
+
+      <div class="checks">
+        <label><input type="checkbox" id="opt-seedable"> Only passives I can realistically get into a line</label>
+      </div>
+    </div>
+
+    <div class="cols" style="margin-top: 16px;">
+      <div class="stack">
+        <div class="panel" id="loadout"></div>
+      </div>
+      <div class="stack">
+        <div class="panel" id="loadout-extras"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------- combos -->
+  <section id="view-combos" role="tabpanel" aria-labelledby="tab-combos" hidden>
+    <div class="cols">
+      <div class="panel">
+        <h2>What do these two make?</h2>
+        <p class="hint">Any two Pals, in any order — the result is the same either way.</p>
+        <div class="row">
+          <label class="field"><span>Parent</span><input type="text" id="combo-a" list="pal-list" autocomplete="off"></label>
+          <label class="field"><span>Parent</span><input type="text" id="combo-b" list="pal-list" autocomplete="off"></label>
+        </div>
+        <div id="combo-out" style="margin-top: 12px;"></div>
+      </div>
+
+      <div class="panel">
+        <h2>How do I make this Pal?</h2>
+        <p class="hint">Every parent pair in the game that produces it.</p>
+        <label class="field"><span>Pal</span><input type="text" id="combo-child" list="pal-list" autocomplete="off"></label>
+        <div id="combo-parents" style="margin-top: 6px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footnote" id="footnote"></p>
+</main>
+
+<datalist id="pal-list"></datalist>
+<datalist id="passive-list"></datalist>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

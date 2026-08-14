@@ -1,0 +1,19 @@
+{
+  "name": "palworld-breeding-optimiser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plan the shortest breeding line to any Palworld 1.0 Pal with the passives you want, and work out which passives it should have.",
+  "type": "module",
+  "scripts": {
+    "data": "node tools/fetch-upstream.mjs && node tools/build-data.mjs && node tools/verify-data.mjs",
+    "verify": "node tools/verify-data.mjs",
+    "test": "node tools/test-solver.mjs",
+    "build": "node tools/build-single.mjs",
+    "serve": "python3 -m http.server 8765",
+    "smoke": "node tools/smoke.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright": "^1.49.1"
+  }
+}
