@@ -462,12 +462,34 @@ for (const element of ELEMENTS) $('element').append(el('option', { value: elemen
 
 function renderLoadout() {
   const role = ROLES.find((r) => r.id === $('role').value);
-  $('wrap-task').hidden = role.id !== 'base';
-  $('wrap-element').hidden = role.id !== 'combat';
+  const palIndex = db.palByName.get($('rec-pal').value.trim());
+  const pal = palIndex === undefined ? null : db.pals[palIndex];
 
-  const workTask = role.id === 'base' ? $('work-task').value : null;
-  const element = role.id === 'combat' ? ($('element').value || null) : null;
-  const result = recommendPassives(db, { role, element, workTask, breedableOnly: $('opt-seedable').checked });
+  $('wrap-task').hidden = role.id !== 'base';
+  // The Pal's own element is used when one is chosen, so the manual picker is
+  // only there for when it is not.
+  $('wrap-element').hidden = role.id !== 'combat' || !!pal;
+
+  // Offer the jobs this Pal can actually be assigned to, best one first.
+  const jobs = pal
+    ? db.workTypes.filter((t) => (pal.work?.[t] ?? 0) > 0).sort((a, b) => pal.work[b] - pal.work[a])
+    : db.workTypes;
+  const taskSelect = $('work-task');
+  const previous = taskSelect.value;
+  const options = jobs.length ? jobs : db.workTypes;
+  if (options.join() !== [...taskSelect.options].map((o) => o.value).join()) {
+    taskSelect.replaceChildren(...options.map((t) => el('option', {
+      value: t,
+      textContent: pal && pal.work?.[t] ? `${t} (level ${pal.work[t]})` : t,
+    })));
+    taskSelect.value = options.includes(previous) ? previous : options[0];
+  }
+
+  renderPalSummary(pal);
+
+  const workTask = role.id === 'base' ? taskSelect.value : null;
+  const element = role.id === 'combat' && !pal ? ($('element').value || null) : null;
+  const result = recommendPassives(db, { role, pal, element, workTask, breedableOnly: $('opt-seedable').checked });
 
   const top = result.loadout[0]?.score ?? 1;
   const slots = result.loadout.map((entry, i) => el('div', { className: 'slot' }, [
@@ -481,8 +503,12 @@ function renderLoadout() {
     el('div', { className: 'score' }, entry.score.toFixed(0)),
   ]));
 
+  const heading = pal
+    ? `Best ${result.freeSlots === 4 ? 'four' : result.freeSlots} for ${pal.name} ${role.id === 'base' ? `on ${workTask}` : `in ${role.label.toLowerCase()}`}`
+    : `Best four for a ${role.label.toLowerCase()} Pal${workTask ? ` doing ${workTask}` : ''}`;
+
   $('loadout').replaceChildren(
-    el('h2', {}, `Best four for a ${role.label.toLowerCase()} Pal${workTask ? ` doing ${workTask}` : ''}`),
+    el('h2', {}, heading),
     el('p', { className: 'hint' }, role.blurb),
     ...(slots.length ? slots : [el('p', { className: 'empty' }, 'No passive helps with this job.')]),
     el('div', { style: 'margin-top:14px' }, el('button', {
@@ -540,7 +566,31 @@ function describeSourcing(how) {
   return 'Never appears from a breeding roll — inherit it from a caught Pal that has it' + (how.surgeryItem ? ', or apply a surgery.' : '.');
 }
 
-for (const id of ['role', 'work-task', 'element', 'opt-seedable']) $(id).addEventListener('change', renderLoadout);
+/** A one-line read on the Pal itself, so the advice is visibly about this Pal. */
+function renderPalSummary(pal) {
+  const host = $('rec-pal-summary');
+  if (!pal) {
+    host.replaceChildren();
+    return;
+  }
+  const jobs = db.workTypes.filter((t) => (pal.work?.[t] ?? 0) > 0)
+    .sort((a, b) => pal.work[b] - pal.work[a])
+    .map((t) => `${t} ${pal.work[t]}`);
+
+  host.replaceChildren(el('div', { className: 'tags' }, [
+    ...pal.elements.map((e) => el('span', { className: 'tag want' }, e)),
+    el('span', { className: 'tag' }, `Attack ${pal.attack}`),
+    el('span', { className: 'tag' }, `Defense ${pal.defense}`),
+    el('span', { className: 'tag' }, `HP ${pal.hp}`),
+    ...(pal.nocturnal ? [el('span', { className: 'tag' }, 'Nocturnal')] : []),
+    ...(jobs.length ? [el('span', { className: 'tag' }, jobs.join(' · '))] : [el('span', { className: 'tag warn' }, 'No base work')]),
+  ]));
+}
+
+for (const id of ['rec-pal', 'role', 'work-task', 'element', 'opt-seedable']) {
+  $(id).addEventListener('change', renderLoadout);
+}
+$('rec-pal').addEventListener('input', renderLoadout);
 
 /* -------------------------------------------------------- combo lookup */
 

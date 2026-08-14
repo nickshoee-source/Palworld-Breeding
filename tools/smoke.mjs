@@ -84,6 +84,17 @@ await step('recommends passives for each role', async () => {
     const slots = await page.locator('#loadout .slot').count();
     if (slots === 0) problems.push(`role ${role} produced no recommendations`);
   }
+  // Picking a Pal must change the answer, not just the heading.
+  await page.selectOption('#role', 'combat');
+  await page.fill('#rec-pal', 'Frostallion');
+  await page.dispatchEvent('#rec-pal', 'change');
+  await page.waitForTimeout(80);
+  const frost = (await page.locator('#loadout').innerText()) + (await page.locator('#loadout-extras').innerText());
+  if (!/born with .*Legend/.test(frost)) problems.push('did not account for Frostallion’s innate passives');
+  if (/^\s*1\s+Legend/m.test(frost)) problems.push('recommended a passive the Pal already has');
+
+  await page.fill('#rec-pal', '');
+  await page.dispatchEvent('#rec-pal', 'change');
   await page.selectOption('#role', 'base');
   await page.selectOption('#work-task', 'Mining');
   await page.waitForTimeout(60);

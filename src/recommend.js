@@ -77,6 +77,37 @@ export const ROLES = [
 const ELEMENTS = ['Neutral', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Ground', 'Dark', 'Dragon'];
 
 /**
+ * Bends a role's weights to the Pal in hand. This is what makes the answer
+ * specific rather than a generic tier list: the same role scores differently on
+ * a glass-cannon attacker, a nocturnal miner, and a Pal that cannot farm.
+ */
+function personalise(role, pal, workTask) {
+  const weights = { ...role.weights };
+
+  // Farming is the one job a passive can raise work suitability for.
+  if (role.id === 'base') weights.farmingSuitability = workTask === 'Farming' ? 25 : 0;
+  if (!pal) return weights;
+
+  if (role.id === 'combat') {
+    // A percentage buff pays out in proportion to the stat it multiplies, so a
+    // Pal that already hits hard gains more from +Attack% than a tanky one does.
+    const mean = ((pal.attack ?? 100) + (pal.defense ?? 100)) / 2 || 1;
+    weights.attack *= (pal.attack ?? 100) / mean;
+    weights.defense *= (pal.defense ?? 100) / mean;
+    weights.maxHp *= (pal.hp ?? 100) / 100;
+  }
+
+  if (role.id === 'base' && pal.nocturnal) {
+    // A nocturnal Pal is already awake at night; Insomnia adds nothing, and
+    // sleeping through the day is simply what it does.
+    weights.worksAtNight = 0;
+    weights.sleepsInDay = 0;
+  }
+
+  return weights;
+}
+
+/**
  * Scores one passive for one role.
  *
  * @param element  the Pal's element, so an element booster is only credited when
@@ -84,11 +115,9 @@ const ELEMENTS = ['Neutral', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Groun
  * @returns `{ score, contributions }` where each contribution explains a slice
  *          of the total in plain terms.
  */
-export function scorePassive(passive, role, { element = null, workTask = null } = {}) {
-  const weights = { ...role.weights };
-
-  // Farming is the one job a passive can add work suitability to.
-  if (role.id === 'base') weights.farmingSuitability = workTask === 'Farming' ? 25 : 0;
+export function scorePassive(passive, role, { element = null, elements = null, workTask = null, pal = null } = {}) {
+  const weights = personalise(role, pal, workTask);
+  const wanted = elements ?? (element ? [element] : []);
 
   let score = 0;
   const contributions = [];
@@ -99,8 +128,9 @@ export function scorePassive(passive, role, { element = null, workTask = null } 
 
     if (key.startsWith('elemAtk:')) {
       const of = key.slice(8);
-      if (!element) continue;
-      weight = of === element ? weights.elementAttack ?? 0 : 0;
+      if (wanted.length === 0) continue;
+      // A booster only pays out on a Pal that deals that element's damage.
+      weight = wanted.includes(of) ? weights.elementAttack ?? 0 : 0;
       label = `${of} damage`;
     } else if (key.startsWith('elemRes:')) {
       weight = weights.elementResist ?? 0;
@@ -148,29 +178,49 @@ export function obtainability(db, passiveIndex) {
  *
  * @param options `{ role, element, workTask, breedableOnly }`
  */
-export function recommendPassives(db, { role, element = null, workTask = null, breedableOnly = false }) {
+export function recommendPassives(db, { role, element = null, workTask = null, breedableOnly = false, pal = null }) {
+  const elements = pal?.elements ?? null;
+
+  // Passives the Pal is born with are already in its slots: they should not be
+  // recommended, and they leave fewer slots to fill.
+  const innate = new Set((pal?.guaranteed ?? []).map((id) => db.passiveById.get(id)).filter((i) => i !== undefined));
+
   const scored = db.passives
     .map((passive, index) => {
-      const { score, contributions } = scorePassive(passive, role, { element, workTask });
+      const { score, contributions } = scorePassive(passive, role, { element, elements, workTask, pal });
       return { index, passive, score, contributions, obtain: obtainability(db, index) };
     })
-    .filter((entry) => entry.contributions.length > 0);
+    .filter((entry) => entry.contributions.length > 0 && !innate.has(entry.index));
 
   const positive = scored.filter((e) => e.score > 0).sort((a, b) => b.score - a.score);
   const negative = scored.filter((e) => e.score < 0).sort((a, b) => a.score - b.score);
 
   const eligible = breedableOnly ? positive.filter((e) => e.obtain.seedable) : positive;
 
-  // A Pal has exactly four passive slots, so the recommendation is the best four.
-  const loadout = eligible.slice(0, 4);
-  const alternatives = eligible.slice(4, 12);
+  // A Pal has exactly four passive slots, and any it was born with are spoken for.
+  const freeSlots = Math.max(0, 4 - innate.size);
+  const loadout = eligible.slice(0, freeSlots);
+  const alternatives = eligible.slice(freeSlots, freeSlots + 8);
 
   const notes = [];
-  if (role.id === 'combat' && !element) {
+
+  if (innate.size) {
     notes.push(
-      'Pick your Pal’s element to have the element boosters ranked too — a matching booster ' +
-      'is usually worth a slot on a damage dealer.',
+      `${pal.name} is always born with ${[...innate].map((i) => db.passives[i].name).join(', ')}, ` +
+      `which leaves ${freeSlots} slot${freeSlots === 1 ? '' : 's'} to breed for.`,
     );
+  }
+  if (role.id === 'combat' && elements?.length) {
+    notes.push(`Element boosters are ranked for ${elements.join(' / ')}, since that is what ${pal.name} deals damage as.`);
+  }
+  if (role.id === 'combat' && !elements && !element) {
+    notes.push('Pick a Pal, or its element, to have the element boosters ranked too.');
+  }
+  if (role.id === 'base' && pal && workTask && !(pal.work?.[workTask] > 0) && workTask !== 'Farming') {
+    notes.push(`${pal.name} has no ${workTask} suitability at all, so it cannot be assigned to that job however good its passives are.`);
+  }
+  if (role.id === 'base' && pal?.nocturnal) {
+    notes.push(`${pal.name} is nocturnal, so it already works through the night — Insomnia is scored at nothing here.`);
   }
   if (role.id === 'base' && workTask === 'Farming') {
     notes.push('Ranch Master and Farmhand raise Farming suitability outright, which is why they outrank raw work speed here.');
@@ -188,7 +238,7 @@ export function recommendPassives(db, { role, element = null, workTask = null, b
     );
   }
 
-  return { loadout, alternatives, avoid: negative.slice(0, 6), notes, role, element, workTask };
+  return { loadout, alternatives, avoid: negative.slice(0, 6), notes, role, element, elements, workTask, pal, innate: [...innate], freeSlots };
 }
 
 /** The Pals with the highest suitability for a base job, best first. */

@@ -130,6 +130,10 @@
 
       <div class="row" style="margin-bottom: 14px;">
         <label class="field">
+          <span>Which Pal</span>
+          <input type="text" id="rec-pal" list="pal-list" placeholder="Any Pal — leave blank for general advice" autocomplete="off">
+        </label>
+        <label class="field">
           <span>This Pal is for</span>
           <select id="role"></select>
         </label>
@@ -142,6 +146,7 @@
           <select id="element"></select>
         </label>
       </div>
+      <div id="rec-pal-summary"></div>
 
       <div class="checks">
         <label><input type="checkbox" id="opt-seedable"> Only passives I can realistically get into a line</label>

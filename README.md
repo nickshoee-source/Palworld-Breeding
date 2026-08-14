@@ -11,7 +11,7 @@ Three tools in one page:
 | Tab | What it does |
 | --- | --- |
 | **Breeding planner** | Your Pals + the Pal you want → ranked breeding routes, step by step |
-| **Best passives** | A role (combat, mount, base job, breeding farm, player support) → the best four passives, scored from the game's own numbers |
+| **Best passives** | A Pal + a role (combat, mount, base job, breeding farm, player support) → the best passives for *that* Pal, scored from the game's own numbers |
 | **Combo lookup** | What two Pals make, and every pair that produces a given Pal |
 
 ## Running it
@@ -31,10 +31,12 @@ real origin, so opening `index.html` from disk will not work.
 ## The data
 
 Everything comes from the game's own tables, by way of the
-[palcalc](https://github.com/tylercamp/palcalc) data dumps (MIT), which are
-generated directly from Palworld's data assets:
+[palcalc](https://github.com/tylercamp/palcalc) data dumps (MIT) for Pals,
+passives and breeding, and [Pal Editor](https://github.com/KrisCris/Palworld-Pal-Editor)
+(MIT) for elements. Both are generated directly from Palworld's data assets and
+key on the same internal names:
 
-- **299 Pals** with stats, work suitability, gender odds and innate passives
+- **299 Pals** with stats, elements, work suitability, gender odds and innate passives
 - **115 passive skills** with their real effect values
 - **All 44,850 breeding pairs**, plus the one pair whose result depends on which
   parent is female (Katress × Wixen)
@@ -85,7 +87,16 @@ options, and every route shows both numbers.
 
 ## How the passive recommender decides
 
-There is no hand-written tier list. Each passive's effects were parsed out of its
+Pick a Pal and the answer is about that Pal, not its role in general. Its
+elements decide which damage boosters count; the passives it is born with are
+excluded and reduce the slots left to breed for (Frostallion arrives with Legend
+and Ice Emperor, so only two slots are open); attack and defense weights scale
+with its actual stats, because a percentage buff pays out in proportion to the
+stat it multiplies; the base-job list is limited to jobs it can really be
+assigned to; and a nocturnal Pal scores Insomnia at nothing because it already
+works at night.
+
+Underneath that, there is no hand-written tier list. Each passive's effects were parsed out of its
 in-game description at build time (`Attack +20%` → `attack: 20`), and a role is a
 set of weights saying what one point of each effect is worth for that job. A
 passive's score is the dot product, so every recommendation can show the numbers
@@ -97,8 +108,6 @@ build rather than being silently dropped, so new wording in a patch gets noticed
 ## Known limits
 
 - **IVs are not modelled.** The planner optimises species and passives only.
-- **Pal elements are not in the upstream data**, so for a combat Pal you pick the
-  element yourself to have the element boosters ranked.
 - **Junk passives on intermediates are estimated**, not tracked individually —
   the solver carries the most likely count forward rather than enumerating which
   specific unwanted traits a child ends up with.

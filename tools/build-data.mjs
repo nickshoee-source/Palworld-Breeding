@@ -21,6 +21,7 @@ const read = async (p) => JSON.parse(await readFile(join(ROOT, p), 'utf8'));
 
 const db = await read('vendor/db.json');
 const breedingRaw = await read('vendor/breeding.json');
+const palExtra = await read('vendor/pal_data.json');
 
 /* ------------------------------------------------------------------ pals */
 
@@ -141,6 +142,7 @@ const passiveById = new Map(passives.map((p) => [p.id, p]));
 /* ------------------------------------------------- pals, second pass */
 
 const unresolvedGuaranteed = new Set();
+const missingElements = [];
 const palsOut = pals.map((p) => {
   const guaranteed = (p.GuaranteedPassivesInternalIds ?? []).filter((id) => {
     if (passiveById.has(id)) return true;
@@ -152,9 +154,13 @@ const palsOut = pals.map((p) => {
     const level = p.WorkSuitability?.[key] ?? 0;
     if (level > 0) work[label] = level;
   }
+  const elements = palExtra[p.InternalName]?.Elements ?? [];
+  if (elements.length === 0) missingElements.push(p.Name);
+
   return {
     name: p.Name,
     id: p.InternalName,
+    elements,
     dex: p.Id.PalDexNo,
     variant: p.Id.IsVariant,
     breedingPower: p.BreedingPower,
@@ -177,6 +183,12 @@ const palsOut = pals.map((p) => {
     guaranteed,
   };
 });
+
+// Elements drive which damage boosters are worth a slot, so a gap here would
+// quietly degrade every combat recommendation.
+if (missingElements.length) {
+  throw new Error(`no element data for ${missingElements.length} Pal(s): ${missingElements.slice(0, 5).join(', ')}`);
+}
 
 if (unresolvedGuaranteed.size) {
   console.warn(`note: ${unresolvedGuaranteed.size} guaranteed-passive ids are not standard passives and were dropped`);
